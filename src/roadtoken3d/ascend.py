@@ -123,6 +123,8 @@ def main():
     protocol = dict(schema='roadtoken3d-current-ascend-v1', config=config,
                     source_sha256=source_pins(), config_sha256=sha(args.config),
                     parent_sha256={k:sha(config[k]) for k in ['cartesian_parent','road_parent']},
+                    geometry_sha256={p.name:sha(p) for p in sorted(Path(config['geometry']).iterdir())
+                        if p.is_file() and p.suffix in ['.npy','.json']},
                     device_type='npu', torch_version=torch.__version__, precision='FP32')
     if args.weights:
         w = torch.load(args.weights, map_location='cpu', weights_only=False)
