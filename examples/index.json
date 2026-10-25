@@ -1,0 +1,43 @@
+{
+  "sample_count": 3,
+  "selection": "Reuse the three previously selected manuscript illustrative cases; includes a failure example.",
+  "history_included": false,
+  "model_predictions_included": false,
+  "absolute_location_included": false,
+  "vehicle_identifier_included": false,
+  "samples": [
+    {
+      "sample": "sample_01",
+      "file": "examples/sample_01.csv",
+      "description": "Long-range continuation",
+      "rows": 20,
+      "time_step_seconds": 15,
+      "horizon_seconds": 300,
+      "coordinate_frame": "XYZ relative to the last observation, metres",
+      "contents": "recorded future target only",
+      "sha256": "42f49802493386c77a9ce2469bee4a98ce520bc2fcc2407308df7e4a0b3943d9"
+    },
+    {
+      "sample": "sample_02",
+      "file": "examples/sample_02.csv",
+      "description": "Recorded height variation",
+      "rows": 20,
+      "time_step_seconds": 15,
+      "horizon_seconds": 300,
+      "coordinate_frame": "XYZ relative to the last observation, metres",
+      "contents": "recorded future target only",
+      "sha256": "fd0ffeb038f5b6951aa2a1e8fee8212d9204702712d3e69182193e65f40fa1c1"
+    },
+    {
+      "sample": "sample_03",
+      "file": "examples/sample_03.csv",
+      "description": "Longitudinal overshoot",
+      "rows": 20,
+      "time_step_seconds": 15,
+      "horizon_seconds": 300,
+      "coordinate_frame": "XYZ relative to the last observation, metres",
+      "contents": "recorded future target only",
+      "sha256": "b8d625d564723d481965b03c2b9f4d5cbc93b50a6da5397612017aaab6ced9b8"
+    }
+  ]
+}
