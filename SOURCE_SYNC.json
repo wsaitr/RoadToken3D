@@ -336,5 +336,36 @@
     "old_unused_definitions_removed": 32,
     "historical_training_or_cloud_scripts_included": false,
     "sample_count": 3
-  }
+  },
+  "native_ARM_CPU_validation": {
+    "passed": true,
+    "architecture": "aarch64",
+    "python": "3.10.6",
+    "torch": "2.3.1",
+    "device": "cpu",
+    "checks": [
+      {
+        "name": "samples",
+        "exit_code": 0,
+        "seconds": 0.033618177999983345
+      },
+      {
+        "name": "model_and_resume",
+        "exit_code": 0,
+        "seconds": 11.555645553999994
+      },
+      {
+        "name": "entry_help",
+        "exit_code": 0,
+        "seconds": 1.8152032639999902
+      }
+    ],
+    "model_and_resume_log_sha256": "027aa2063b541101ac47a6b9ca36672cec48a0bf9fd5fdaa806c908f6b6857ec",
+    "synthetic_optimizer_updates": 3,
+    "real_model_data_rows": 0,
+    "scientific_training_steps": 0,
+    "NPU_execution": false,
+    "scope": "Generated tiny graph; model/Adam/draw/RNG checkpoint replay, not NPU qualification or paper performance"
+  },
+  "synchronization_policy": "Update this port and its source fingerprints when the paper model or losses change; repeat affected checks and preserve explicit device qualification status."
 }

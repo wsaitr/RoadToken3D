@@ -1,6 +1,6 @@
-# RoadToken3D — current model for Huawei Ascend
+# RoadToken3D
 
-私有预发布仓库。仅上传当前论文模型所需代码、一个合成检查和 **3条案例轨迹**；完整样本待录用后另行发布。
+代码与少量样本的公开仓库。仅上传当前论文模型所需代码、一个合成检查和 **3条案例轨迹**；完整样本待录用后另行发布。
 
 ## 当前版本
 
@@ -15,7 +15,7 @@
 
 这次提供的是上述当前模型的昇腾适配入口，**不是旧的端点稳定版改名**。旧训练调度器、云端发布工具、诊断历史、原始大数据、检查点和其他加速器实现均未上传。父模型依赖文件中的旧版本编号属于继承关系，不代表主模型回退。
 
-**验证边界：算法同步和小型CPU合成检查已完成；昇腾实机验收尚未完成。** 不据此声称已有昇腾训练结果或可逐位复现其他设备的历史数值。前缀累加采用保持零填充尾部一致的昇腾设备内参考实现；其数值差异和速度仍须实机验证。
+**验证边界：算法同步及华为云原生ARM CPU检查已完成；昇腾实机验收尚未完成。** 不据此声称已有昇腾训练结果或可逐位复现其他设备的历史数值。前缀累加采用保持零填充尾部一致的昇腾设备内参考实现；其数值差异和速度仍须实机验证。
 
 ## 使用
 
@@ -42,11 +42,13 @@ python -m roadtoken3d.ascend predict --config configs/current.json --weights che
 python tools/inspect_samples.py
 ```
 
-已有PyTorch的环境可运行唯一合成检查：
+已有PyTorch的环境可运行合成检查：
 
 ```bash
 PYTHONPATH=src python tests/smoke_current.py
 ```
+
+ARM验证使用aarch64、Python 3.10.6、PyTorch 2.3.1，已通过前向/反向、8项损失、输入完整性和3次合成更新；保存恢复后的模型、Adam、抽样顺序和随机状态与连续运行完全一致。这些检查不计算论文性能。后续模型或损失变动须同步本适配版，并更新`SOURCE_SYNC.json`中的来源指纹及验证状态。
 
 3条CSV保留论文已有案例的相对XYZ目标轨迹，分别为长程延续、高度变化和水平失败例。不含车辆标识、绝对定位、模型预测、完整历史或道路图；它们用于展示格式与轨迹，不能代替完整训练输入或全样本性能评价。
 
@@ -64,6 +66,6 @@ PYTHONPATH=src python tests/smoke_current.py
 
 ## English
 
-This private preview contains the current paper's v6 model, an Ascend-only FP32 runtime and three illustrative target trajectories. Learned time occupancy, the Z-only height anchor, the learned XYZ branch, bounded road residual and all eight training terms are included. Historical deployment/diagnostic code and alternative accelerator implementations are excluded.
+This code release contains the current paper's v6 model, an Ascend-only FP32 runtime and three illustrative target trajectories. Learned time occupancy, the Z-only height anchor, the learned XYZ branch, bounded road residual and all eight training terms are included. Historical deployment/diagnostic code and alternative accelerator implementations are excluded.
 
-CPU synthetic checks verify implementation properties; they are not Ascend device qualification or paper performance. NPU execution, numerical compatibility and speed remain unverified on actual Ascend hardware. Full data and checkpoints are not included. See the interface document before running training.
+Native ARM CPU synthetic checks (aarch64, PyTorch 2.3.1), including three tiny optimizer updates and exact model/Adam/draw/RNG checkpoint replay, passed. They verify implementation properties; they are not Ascend device qualification or paper performance. NPU execution, numerical compatibility and speed remain unverified on actual Ascend hardware. Full data and checkpoints are not included. See the interface document before running training.
