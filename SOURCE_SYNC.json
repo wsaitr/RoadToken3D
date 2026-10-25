@@ -277,7 +277,7 @@
       "calls": 2
     }
   ],
-  "NPU_real_device_validated": false,
+  "NPU_real_device_validated": true,
   "new_scientific_training_steps": 0,
   "full_data_included": false,
   "current_math_AST_checks": [
@@ -367,5 +367,39 @@
     "NPU_execution": false,
     "scope": "Generated tiny graph; model/Adam/draw/RNG checkpoint replay, not NPU qualification or paper performance"
   },
-  "synchronization_policy": "Update this port and its source fingerprints when the paper model or losses change; repeat affected checks and preserve explicit device qualification status."
+  "synchronization_policy": "Update this port and its source fingerprints when the paper model or losses change; repeat affected checks and preserve explicit device qualification status.",
+  "NPU_validation_scope": "Single-device, generated-data code correctness only; not full-data training, performance or cross-device numerical qualification.",
+  "NPU_small_scale_validation": {
+    "passed": true,
+    "date": "2026-10-25",
+    "allocated_NPUs": 1,
+    "requested_memory_GB": 32,
+    "requested_flavor": "modelarts.bm.npu.arm.1snt9b1",
+    "reported_device_name": "Ascend910B4",
+    "torch": "2.3.1",
+    "torch_npu": "2.3.1.post2.dev20241029",
+    "CANN_installation_directory": "8.0.RC3",
+    "history_steps": 41,
+    "future_steps": 20,
+    "width": 128,
+    "layers": 2,
+    "delayed_hops": 48,
+    "checkpoint_chunk": 8,
+    "global_rows": 128,
+    "micro_rows": 16,
+    "trainable_parameters": 116170,
+    "synthetic_optimizer_updates": 3,
+    "real_data_rows": 0,
+    "fresh_process_model_Adam_draw_and_RNG_states_equal": true,
+    "prefix_float_integer_and_gradient": true,
+    "raw_NPU_Adam_checkpoint_serialization": true,
+    "future_labels_excluded": true,
+    "CPU_fallback_warning_found": false,
+    "peak_allocated_bytes": 159051776,
+    "test_seconds": 79.44251765497029,
+    "tested_code_commit": "489854ba0e1e0bc608f9264374a7d1f653496cc0",
+    "tested_source_set_sha256": "076ac38708f324ee85f49d0eabd0d861913d985f8ebab2b2a5cf98c032433b3b",
+    "continuous_log_sha256": "668210b434ea2d015895673360f5276edce6164cad4fd970d66998e631f5d7ce",
+    "resume_log_sha256": "668210b434ea2d015895673360f5276edce6164cad4fd970d66998e631f5d7ce"
+  }
 }

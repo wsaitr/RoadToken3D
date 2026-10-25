@@ -15,7 +15,7 @@
 
 这次提供的是上述当前模型的昇腾适配入口，**不是旧的端点稳定版改名**。旧训练调度器、云端发布工具、诊断历史、原始大数据、检查点和其他加速器实现均未上传。父模型依赖文件中的旧版本编号属于继承关系，不代表主模型回退。
 
-**验证边界：算法同步及华为云原生ARM CPU检查已完成；昇腾实机验收尚未完成。** 不据此声称已有昇腾训练结果或可逐位复现其他设备的历史数值。前缀累加采用保持零填充尾部一致的昇腾设备内参考实现；其数值差异和速度仍须实机验证。
+**验证边界：算法同步、原生ARM CPU检查及昇腾单卡小规模训练/断点恢复检查已完成。** 不据此声称已有昇腾训练结果或可逐位复现其他设备的历史数值。前缀累加采用保持零填充尾部一致的昇腾设备内参考实现；完整数据上的数值、内存和速度仍需另行验证。
 
 ## 使用
 
@@ -50,6 +50,8 @@ PYTHONPATH=src python tests/smoke_current.py
 
 ARM验证使用aarch64、Python 3.10.6、PyTorch 2.3.1，已通过前向/反向、8项损失、输入完整性和3次合成更新；保存恢复后的模型、Adam、抽样顺序和随机状态与连续运行完全一致。这些检查不计算论文性能。后续模型或损失变动须同步本适配版，并更新`SOURCE_SYNC.json`中的来源指纹及验证状态。
 
+2026-10-25昇腾实机检查也已通过：按最低可用32GB单卡规格申请，设备报告`Ascend910B4`；PyTorch 2.3.1 / torch_npu 2.3.1.post2.dev20241029。使用合成道路、41步历史/20步预测、116170个可训练参数，实际完成3次优化更新（连续2次＋新进程恢复后1次），模型、Adam、抽样与随机状态逐项一致；前缀累加、梯度、输入边界也通过。该检查复用发布版的构建、更新与保存恢复组件，不验证1600步完整任务、真实数据精度或跨设备逐位等价。
+
 3条CSV保留论文已有案例的相对XYZ目标轨迹，分别为长程延续、高度变化和水平失败例。不含车辆标识、绝对定位、模型预测、完整历史或道路图；它们用于展示格式与轨迹，不能代替完整训练输入或全样本性能评价。
 
 ## 最小代码导航
@@ -68,4 +70,4 @@ ARM验证使用aarch64、Python 3.10.6、PyTorch 2.3.1，已通过前向/反向�
 
 This code release contains the current paper's v6 model, an Ascend-only FP32 runtime and three illustrative target trajectories. Learned time occupancy, the Z-only height anchor, the learned XYZ branch, bounded road residual and all eight training terms are included. Historical deployment/diagnostic code and alternative accelerator implementations are excluded.
 
-Native ARM CPU synthetic checks (aarch64, PyTorch 2.3.1), including three tiny optimizer updates and exact model/Adam/draw/RNG checkpoint replay, passed. They verify implementation properties; they are not Ascend device qualification or paper performance. NPU execution, numerical compatibility and speed remain unverified on actual Ascend hardware. Full data and checkpoints are not included. See the interface document before running training.
+Native ARM CPU synthetic checks (aarch64, PyTorch 2.3.1), including three tiny optimizer updates and exact model/Adam/draw/RNG checkpoint replay, passed. They verify implementation properties; they are not Ascend device qualification or paper performance. A one-device Ascend check also passed three synthetic optimizer updates and fresh-process checkpoint replay using the published build/update/checkpoint components (runtime-reported Ascend910B4, requested 32 GB single-device tier). Full-data training, throughput, production-scale memory and cross-device numerical equivalence remain unqualified. Full data and checkpoints are not included. See the interface document before running training.
