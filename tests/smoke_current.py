@@ -1,13 +1,17 @@
 """Small generated fixtures only: zero real trajectories/checkpoints."""
 from types import SimpleNamespace
-import copy,io,json
+import copy,io,json,hashlib,random,tempfile
+from pathlib import Path
 import numpy as np
 import torch
 from roadtoken3d.current_model import from_parents
 from roadtoken3d.dense_model import DenseCoordinateForecaster
 from roadtoken3d.route_model_v13 import RoadNativeV13
 from roadtoken3d.residual import OBSERVATION_KEYS
-from roadtoken3d.optimization import loss_parts,TERMS
+from roadtoken3d.optimization import loss_parts,TERMS,pooled_arithmetic_step,capture_rng,restore_rng,rng_equal
+from roadtoken3d.data import WindowDataset,DrawStream,LABEL_KEYS
+from roadtoken3d.ascend import atomic_save,frozen_guard
+from torch.utils.data import default_collate
 from roadtoken3d.prefix import scan
 def model_batch(length=2000.0):
     graph = SimpleNamespace(points_xyz=np.array([[72000.0, 3279000.0, 0.0], [72000.0 + length, 3279000.0, 0.0]]), s_road=np.array([0.0, length]), road_ptr=np.array([0, 2]), road_length_m=np.array([length]))
@@ -49,6 +53,77 @@ def _model_batch():
     batch['target_road_id'] = torch.tensor([[0, 0, 1, 2], [0, 1, 1, 2]])
     batch['target_road_s'] = torch.tensor([[10.0, 20.0, 30.0, 40.0], [10.0, 20.0, 30.0, 40.0]])
     return (model, batch)
+
+def assert_same(a,b):
+    if isinstance(a,torch.Tensor):
+        assert torch.equal(a,b)
+    elif isinstance(a,np.ndarray):
+        assert np.array_equal(a,b)
+    elif isinstance(a,dict):
+        assert a.keys()==b.keys()
+        for k in a:assert_same(a[k],b[k])
+    elif isinstance(a,(tuple,list)):
+        assert len(a)==len(b)
+        for x,y in zip(a,b):assert_same(x,y)
+    else:assert a==b
+
+def runtime_checks(model,batch):
+    """Three tiny synthetic updates: uninterrupted vs save/reload/replay."""
+    with tempfile.TemporaryDirectory() as directory:
+        root=Path(directory);rows=[]
+        for i in range(3):
+            path=root/f'window-{i}.npz'
+            np.savez(path,**{k:batch[k][i%2].detach().numpy() for k in OBSERVATION_KEYS+LABEL_KEYS})
+            rows.append(dict(sample_id=f'generated-{i}',file=path.name,
+                sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
+        manifest=root/'train.json'
+        manifest.write_text(json.dumps(dict(split='train',windows=rows)))
+        dataset=WindowDataset(manifest,labels=True)
+        observations=WindowDataset(manifest,labels=False)[0]
+        assert not any(k.startswith('target_') for k in observations)
+        for k in OBSERVATION_KEYS+LABEL_KEYS:assert torch.equal(dataset[0][k],batch[k][0])
+        opt=torch.optim.AdamW([p for p in model.parameters() if p.requires_grad],lr=.0003,weight_decay=.001)
+        stream=DrawStream(len(dataset),17);device=torch.device('cpu')
+        def update(m,o,s):
+            indices=s.take(128)
+            batches=[default_collate([dataset[j] for j in indices[i:i+16]]) for i in range(0,128,16)]
+            cache={}
+            record=pooled_arithmetic_step(m,o,batches,lambda mm,b:loss_parts(mm,b,cache),device)
+            assert record['count_replay_values_and_RNG_verified']
+            frozen_guard(m)
+            return record,indices
+        before={k:v.clone() for k,v in model.state_dict().items()}
+        first,_=update(model,opt,stream)
+        assert any(not torch.equal(v,model.state_dict()[k]) for k,v in before.items())
+        checkpoint=root/'step-0001.pt'
+        atomic_save(checkpoint,dict(step=1,model=model.state_dict(),optimizer=opt.state_dict(),
+            rng=capture_rng(device),draw_stream=stream.state_dict()))
+        expected,draws=update(model,opt,stream)
+        expected_model=copy.deepcopy(model.state_dict());expected_opt=copy.deepcopy(opt.state_dict())
+        expected_rng=capture_rng(device);expected_draw=copy.deepcopy(stream.state_dict())
+        loaded=torch.load(checkpoint,map_location='cpu',weights_only=False)
+        replay=copy.deepcopy(model);replay.load_state_dict(loaded['model'],strict=True)
+        replay_opt=torch.optim.AdamW([p for p in replay.parameters() if p.requires_grad],lr=.0003,weight_decay=.001)
+        replay_opt.load_state_dict(loaded['optimizer'])
+        replay_stream=DrawStream(len(dataset),999);replay_stream.load_state_dict(loaded['draw_stream'])
+        random.random();np.random.random();torch.rand(1)
+        restore_rng(loaded['rng'],device)
+        actual,replay_draws=update(replay,replay_opt,replay_stream)
+        assert draws==replay_draws and expected==actual
+        assert_same(expected_model,replay.state_dict());assert_same(expected_opt,replay_opt.state_dict())
+        assert_same(expected_draw,replay_stream.state_dict())
+        assert rng_equal(expected_rng,capture_rng(device))
+        try:atomic_save(checkpoint,{})
+        except FileExistsError:pass
+        else:raise AssertionError('Checkpoint overwrite was not rejected')
+        path=root/rows[0]['file'];path.write_bytes(path.read_bytes()+b'changed')
+        try:WindowDataset(manifest,labels=True)
+        except ValueError:pass
+        else:raise AssertionError('Input hash mismatch was not rejected')
+    return dict(prepared_input_roundtrip=True,observation_only_input=True,input_hash_guard=True,
+        pooled_128_rows_and_eight_losses=True,parameters_actually_updated=True,
+        optimizer_model_draw_and_RNG_resume_exact=True,immutable_checkpoint_guard=True,
+        synthetic_optimizer_updates=3,real_data_rows=0)
 
 def main():
     torch.set_num_threads(1)
@@ -94,8 +169,9 @@ def main():
     y=scan(x,-1)
     assert torch.equal(y,torch.tensor([[1.5,4.,4.,4.]]))
     y.sum().backward();assert torch.equal(x.grad,torch.tensor([[4.,3.,2.,1.]]))
+    runtime=runtime_checks(model,batch)
     print(json.dumps(dict(passed=True,zero_correction_identity=True,nonzero_height_anchor_is_Z_only=True,
         future_label_poisoning_invariance=True,current_eight_loss_terms=True,three_heads_receive_gradients=True,
-        same_state_reload_exact=True,prefix_zero_tail_and_gradient=True,real_data_rows=0,optimizer_updates=0,
-        NPU_device_execution=False),indent=2))
+        same_state_reload_exact=True,prefix_zero_tail_and_gradient=True,real_data_rows=0,optimizer_updates=3,
+        NPU_device_execution=False,runtime_checks=runtime),indent=2))
 if __name__=='__main__':main()
