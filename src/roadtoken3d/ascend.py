@@ -32,6 +32,10 @@ def sha(path):
 def move(batch, device):
     return {k: v.to(device) if isinstance(v, torch.Tensor) else v for k,v in batch.items()}
 
+def geometry_pins(directory):
+    return {p.name: sha(p) for p in sorted(Path(directory).iterdir())
+            if p.is_file() and p.suffix in ('.npy', '.json')}
+
 def setup(device_id, seed):
     import torch_npu  # Registers the Ascend backend; no implicit CPU fallback.
     if not torch.npu.is_available():
@@ -49,6 +53,13 @@ def build(config, device):
     # Load only trusted, author-controlled checkpoints.
     c = torch.load(config['cartesian_parent'], map_location='cpu', weights_only=False)
     r = torch.load(config['road_parent'], map_location='cpu', weights_only=False)
+    for checkpoint, kind in ((c, 'cartesian'), (r, 'road')):
+        declared_kind = checkpoint['protocol'].get('parent_kind')
+        if declared_kind is not None and declared_kind != kind:
+            raise ValueError('Parent checkpoint kind differs from its configured role')
+    recorded_geometry = r['protocol'].get('geometry_sha256')
+    if recorded_geometry is not None and recorded_geometry != geometry_pins(config['geometry']):
+        raise ValueError('Road parent and Full model require identical map geometry')
     direct = DenseCoordinateForecaster(**c['protocol']['model_options'])
     direct.load_state_dict(c['model'], strict=True)
     road = RoadNativeV13(RoadGraph(config['geometry']), **r['protocol']['model_options'])
@@ -124,8 +135,7 @@ def main():
     protocol = dict(schema='roadtoken3d-current-ascend-v1', config=config,
                     source_sha256=source_pins(), config_sha256=sha(args.config),
                     parent_sha256={k:sha(config[k]) for k in ['cartesian_parent','road_parent']},
-                    geometry_sha256={p.name:sha(p) for p in sorted(Path(config['geometry']).iterdir())
-                        if p.is_file() and p.suffix in ['.npy','.json']},
+                    geometry_sha256=geometry_pins(config['geometry']),
                     device_type='npu', torch_version=torch.__version__, precision='FP32')
     if args.weights:
         w = torch.load(args.weights, map_location='cpu', weights_only=False)

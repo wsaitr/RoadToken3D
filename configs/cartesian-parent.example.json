@@ -1,0 +1,27 @@
+{
+  "kind": "cartesian",
+  "seed": 17,
+  "train_manifest": "data/parents/train/manifest.json",
+  "validation_manifest": "data/parents/val/manifest.json",
+  "model_options": {
+    "history_steps": 41,
+    "future_steps": 20,
+    "width": 128,
+    "modes": 1,
+    "architecture": "attention",
+    "dropout": 0.1
+  },
+  "training": {
+    "steps": 800,
+    "global_batch": 256,
+    "micro_batch": 16,
+    "learning_rate": 0.0003,
+    "weight_decay": 0.01,
+    "gradient_clip": 5.0,
+    "z_weight": 1.0,
+    "precision": "bf16",
+    "validate_every": 100,
+    "save_every": 100,
+    "warmup_steps": 100
+  }
+}

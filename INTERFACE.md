@@ -12,7 +12,7 @@ The published Full outputs used fixed1600 weights. The example configuration the
 
 ## Prepared input manifest
 
-The three example CSVs are qualitative target-only previews. To run the model, prepare the 26 observation/map arrays in `residual.OBSERVATION_KEYS` for each window, using the original history-only preprocessing and strict XYZ connectivity protocol. Training additionally needs `target_xyz`, `target_xy_valid`, `target_z_valid`, `target_road_id` and `target_map_confidence`. Do not pass these labels to the model's forward method.
+The three example CSVs are qualitative target-only previews. To run Full, prepare the 26 observation/map arrays in `residual.OBSERVATION_KEYS` for each window, using the original history-only preprocessing and strict XYZ connectivity protocol. Full training additionally needs `target_xyz`, `target_xy_valid`, `target_z_valid`, `target_road_id` and `target_map_confidence`. Road-parent training also requires `target_road_s`; Cartesian-parent training reads only the first five observation keys and the three XYZ label/mask arrays. See [TRAINING.md](TRAINING.md) for all stages. Do not pass future labels to the model's forward method.
 
 Each NPZ holds one unbatched window and uses ordinary numerical arrays; object/pickle arrays are rejected. A separate JSON manifest contains:
 
@@ -26,6 +26,8 @@ Each NPZ holds one unbatched window and uses ordinary numerical arrays; object/p
 ```
 
 Use `val` or `dev` for the validation manifest. Prepared file hashes are checked before use. TRAIN and validation sample IDs must not overlap; upstream vehicle/time isolation and source validity also need to be established by the dataset owner. Predict mode loads only observation arrays and does not compute a hindsight teacher.
+
+`tools/build_manifest.py` creates this index from existing NPZ windows. It does not perform raw-data preprocessing. Parent `best.pt` exports contain `protocol.model_options` and `model`; Full constructs each parent from these options and loads its state strictly. Newly trained road parents also bind the map's numerical/JSON files by SHA-256. Numbered parent checkpoints additionally contain optimizer, draw stream, RNG, and selection state for same-runtime resume.
 
 ## Ascend adaptation
 
@@ -43,4 +45,4 @@ Output metadata describes model identity, geometry, masks, and coordinate semant
 
 ## Runnable demonstration and paper reproduction
 
-`tests/smoke_current.py` is the existing self-contained generated-data demonstration. It builds the actual model classes with tiny dimensions and initialized parents, performs updates, and exercises checkpoint resume without private assets. The three recorded CSV cases are target-only illustrations. Full manuscript reproduction additionally requires the full prepared dataset, map geometry, and frozen trained parent weights; these are not supplied in this minimal release.
+`tests/smoke_current.py` is the existing self-contained generated-data demonstration. It builds the actual model classes with tiny dimensions and initialized parents, performs updates, and exercises checkpoint resume without private assets. The three recorded CSV cases are target-only illustrations. The parent training code is provided, so pretrained downloads are optional. Real-data training still requires the prepared dataset and matching map geometry, to be released separately. Historical distributed sampling and reduction order are not reproduced by the standalone parent runner; newly trained weights are not guaranteed to match historical scores. The new parent entry point has not received device execution testing.

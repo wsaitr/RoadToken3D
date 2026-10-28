@@ -2,10 +2,10 @@
   "arm": "joint-timegate6-anchor",
   "seed": 17,
   "selection": "fixed-final",
-  "cartesian_parent": "private/cartesian-attention-seed17/best.pt",
-  "road_parent": "private/v14-travel-endpoint-seed17/best.pt",
-  "geometry": "private/road_geometry_v10",
-  "train_manifest": "private/train/manifest.json",
-  "validation_manifest": "private/validation/manifest.json",
-  "inference_manifest": "private/inference/manifest.json"
+  "cartesian_parent": "runs/parents/cartesian/best.pt",
+  "road_parent": "runs/parents/road/best.pt",
+  "geometry": "data/road_geometry_v10",
+  "train_manifest": "data/full/train/manifest.json",
+  "validation_manifest": "data/full/val/manifest.json",
+  "inference_manifest": "data/inference/manifest.json"
 }

@@ -38,20 +38,26 @@ python -m roadtoken3d.ascend --help
 
 ## Training, prediction, and resume
 
-Copy [configs/current.example.json](configs/current.example.json) to `configs/current.json` and set the parent-checkpoint, road-geometry, and prepared-input paths. See [INTERFACE.md](INTERFACE.md) for input arrays, split checks, and checkpoint compatibility.
+The complete code path is **train the two parents -> train Full -> predict**. Pretrained parent downloads are optional: [TRAINING.md](TRAINING.md) documents training both parents from random initialization, prepared-data manifests, selection, and checkpoint resume. The full dataset and road geometry will be released separately.
+
+The example configurations reference the parent outputs and prepared input paths in that guide. See [INTERFACE.md](INTERFACE.md) for input arrays, split checks, and checkpoint compatibility.
 
 ```bash
-# Train on an Ascend NPU.
-python -m roadtoken3d.ascend train --config configs/current.json --output runs/train
+# Train the two parents on an Ascend NPU.
+python -m roadtoken3d.pretrain cartesian --config configs/cartesian-parent.example.json --output runs/parents/cartesian
+python -m roadtoken3d.pretrain road --config configs/road-parent.example.json --output runs/parents/road
+
+# Train Full using the selected parents.
+python -m roadtoken3d.ascend train --config configs/current.example.json --output runs/full
 
 # Resume a checkpoint with the same source, configuration, data, and runtime.
-python -m roadtoken3d.ascend train --config configs/current.json --resume runs/train/step-0050.pt --output runs/resumed
+python -m roadtoken3d.ascend train --config configs/current.example.json --resume runs/full/step-0050.pt --output runs/resumed
 
 # Predict using trained weights and observation/map inputs.
-python -m roadtoken3d.ascend predict --config configs/current.json --weights checkpoints/full.pt --output runs/prediction
+python -m roadtoken3d.ascend predict --config configs/current.example.json --weights runs/full/step-1600.pt --output runs/prediction
 ```
 
-Use the actual checkpoint filename produced by your run for `--resume`. Training and prediction require an Ascend NPU; the tensor core also supports CPU implementation checks. The default configuration uses 41 history positions, 20 forecast steps at 15 s, 1,600 updates, a global batch of 128, microbatches of 16, and FP32 AdamW.
+Use the actual checkpoint filename produced by your run for `--resume`. Training and prediction require an Ascend NPU; the tensor core also supports CPU implementation checks. The Full configuration uses 41 history positions, 20 forecast steps at 15 s, 1,600 updates, a global batch of 128, microbatches of 16, and FP32 AdamW. Each parent recipe uses 800 updates, global batch 256, and BF16 forward autocast.
 
 ## Examples and checks
 
@@ -67,7 +73,7 @@ The examples contain relative XYZ **future targets only**, covering long-range c
 
 Small generated-data checks passed on native ARM CPU and a single Ascend device on 2026-10-25. The Ascend runtime reported `Ascend910B4` with PyTorch 2.3.1 and `torch_npu` 2.3.1.post2.dev20241029. Three optimizer updates covered a continuous run and a fresh-process checkpoint resume, with matching model, Adam, sampling, and RNG states. Prefix operations, gradients, Z-only anchoring, and future-label exclusion were also checked.
 
-These checks establish small-scale code correctness. Full-data accuracy, throughput, production-scale memory, and cross-device numerical equivalence require separate evaluation. 
+These earlier checks cover small-scale Full-model execution. The newly added parent runner has received static source/configuration review only and has not been run on hardware. Full-data accuracy, throughput, production-scale memory, and cross-device numerical equivalence require separate evaluation.
 
 ## Code map
 
@@ -77,6 +83,8 @@ These checks establish small-scale code correctness. Full-data accuracy, through
 | `src/roadtoken3d/current_loss.py`, `optimization.py` | Shared objectives, gate supervision, and pooled updates |
 | `src/roadtoken3d/residual.py`, `endpoint.py` | Road-relative displacement and endpoint-stable decoding |
 | `src/roadtoken3d/data.py` | Prepared inputs, hashes, and reproducible sampling |
+| `src/roadtoken3d/pretrain.py`, `parent_objectives.py` | Cartesian/road parent training, original losses, selection, and resume |
 | `src/roadtoken3d/ascend.py`, `prefix.py` | Ascend execution and prefix-operation compatibility |
+| `tools/build_manifest.py`, `configs/`, `TRAINING.md` | Prepared-file indexing, training recipes, and complete workflow |
 | Other model modules | Direct dependencies of the frozen parent models |
 | `examples/` | Three recorded target trajectories and their hashes |

@@ -11,11 +11,12 @@ LABEL_KEYS = ('target_xyz', 'target_xy_valid', 'target_z_valid',
               'target_road_id', 'target_map_confidence')
 
 class WindowDataset(Dataset):
-    def __init__(self, manifest, *, labels=False):
+    def __init__(self, manifest, *, labels=False, observation_keys=OBSERVATION_KEYS, label_keys=LABEL_KEYS):
         self.path = Path(manifest).resolve()
         self.manifest = json.loads(self.path.read_text())
         self.rows = self.manifest['windows']
         self.labels = labels
+        self.keys = tuple(observation_keys) + (tuple(label_keys) if labels else ())
         if not self.rows or len({r['sample_id'] for r in self.rows}) != len(self.rows):
             raise ValueError('Nonempty unique sample IDs required')
         self.manifest_sha256 = hashlib.sha256(self.path.read_bytes()).hexdigest()
@@ -29,7 +30,7 @@ class WindowDataset(Dataset):
 
     def __getitem__(self, index):
         row = self.rows[index]
-        keys = OBSERVATION_KEYS + (LABEL_KEYS if self.labels else ())
+        keys = self.keys
         with np.load(self.path.parent / row['file'], allow_pickle=False) as src:
             result = {k: torch.from_numpy(np.array(src[k], copy=True)) for k in keys}
         result['sample_id'] = row['sample_id']
