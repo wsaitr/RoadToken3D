@@ -1,15 +1,11 @@
-"""Native TRAIN objective for the unregistered endpoint-stable v2 family.
+"""Shared trajectory and graph objectives for the current RoadToken3D model.
 
-The six terms, weights, detached teacher assignment and additive reductions
-are the frozen v1 mathematics. Only pure numerical helpers are imported from
-v1; neither its family guard nor its complete objective is called. Final
-coordinates, not correction-branch geometry, supervise XY/height. Graph
-supervision remains independent of candidate acceptance.
-
-A caller must declare split="train". This guard prevents intentional use of
-the hindsight teacher in DEV/TEST evaluation, but cannot independently prove
-the provenance of tensors supplied by that caller. It does not register a
-study, adapt the frozen v1 runner, admit NPU execution, or authorize training.
+This module supplies six loss terms; optimization.py adds the height- and
+time-gate objectives. Detached teacher assignment supervises final XY/Z
+coordinates, while graph supervision remains independent of candidate
+acceptance. The explicit TRAIN split keeps hindsight teachers out of
+validation and prediction. Shape, geometry, and model-family checks enforce
+the interface contract; they are not an experiment-approval mechanism.
 """
 from __future__ import annotations
 
@@ -31,18 +27,15 @@ DEFAULT_WEIGHTS = dict(_V1_DEFAULT_WEIGHTS)
 def _check_v2_contract(output, batch):
     meta = output.get("metadata", {})
     if (not isinstance(meta, Mapping) or meta.get("model_family") != FAMILIES.get(meta.get("arm")) or
-            meta.get("development_only") is not True or
             meta.get("endpoint_lateral_frame") != "sampled_at_clamped_arc_inside_same_strict_prefix" or
             meta.get("short_prefix_longitudinal_saturation_repaired") is not False or
             meta.get("strict_XYZ_connectivity_or_elevation_repaired") is not False or
-            meta.get("registered_v1_study_compatible") is not False or
-            meta.get("preregistered") is not False or
             meta.get("final_road_geometry_constraint") is not False or
             meta.get("correction_branch_geometry_is_final_output_geometry") is not False or
             meta.get("final_equation") != EQUATIONS.get(meta.get("arm")) or
             meta.get("old_v13_v17_loss_compatible") is not False or
             output.get("road_geometry_constraint") is not False):
-        raise ValueError("This objective requires the native endpoint-stable v2 contract and explicit endpoint flags")
+        raise ValueError("The current RoadToken3D objective requires matching model and geometry metadata")
     from .current_model import validate_output
     validate_output(output)
     # A legacy geometry alias would make the output semantics ambiguous. This
@@ -242,9 +235,7 @@ def joint_residual_loss(output, batch, weights=None, return_parts=False, *, spli
         "training_assigned_mode": torch.where(available, assignment, torch.full_like(assignment, -1)).detach(),
         "aggregation": "sum_each_term_numerator_and_denominator_before_dividing; not_mean_of_microbatch_means",
         "graph_supervision_independent_of_candidate_acceptance": True,
-        "preregistered": False,
         "model_family": output["metadata"]["model_family"],
-        "registered_v1_study_compatible": False,
         "teacher_scope": "training_objective_only_not_forecast_or_evaluation",
         "declared_split": split,
         "data_split_provenance_verified": False,

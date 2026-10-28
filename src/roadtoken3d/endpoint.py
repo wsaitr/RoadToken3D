@@ -1,11 +1,9 @@
-"""Unregistered DEV revision of the road-displacement residual decoder.
+"""Endpoint-stable road-relative displacement decoder.
 
-The frozen v1 module and its 1600-update study are not changed or replaced.
-This revision fixes only the loss of a lateral frame when requested progress
-exceeds a candidate's endpoint. It does NOT extend a road, relax strict XYZ
-joins, restore longitudinal sensitivity beyond a short prefix, repair map
-heights, or certify traffic legality. A new study/adapter is required to train
-or score this distinct model family; the v1 production admission must reject it.
+The lateral frame is sampled inside the same strict road prefix as the
+clamped centerline position. This keeps lateral offsets defined at an
+endpoint without extending the road or changing strict XYZ joins. Requested
+longitudinal progress can still saturate at a short prefix's endpoint.
 """
 from __future__ import annotations
 from .prefix import cumsum as _prefix_sum
@@ -43,7 +41,7 @@ class EndpointStableRoadDisplacementResidualFusion(RoadDisplacementResidualFusio
 
     def forward(self, *road_inputs):
         output = super().forward(*road_inputs)
-        output['metadata'] = {**output['metadata'], 'model_family': FAMILY, 'endpoint_lateral_frame': 'sampled_at_clamped_arc_inside_same_strict_prefix', 'short_prefix_longitudinal_saturation_repaired': False, 'strict_XYZ_connectivity_or_elevation_repaired': False, 'registered_v1_study_compatible': False}
+        output['metadata'] = {**output['metadata'], 'model_family': FAMILY, 'endpoint_lateral_frame': 'sampled_at_clamped_arc_inside_same_strict_prefix', 'short_prefix_longitudinal_saturation_repaired': False, 'strict_XYZ_connectivity_or_elevation_repaired': False}
         return output
 
 def endpoint_stable_residual_forward(model, batch):

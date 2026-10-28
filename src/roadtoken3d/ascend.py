@@ -1,7 +1,8 @@
-"""Minimal FP32 Ascend train/predict entry point for the current v6 model.
+"""Ascend train/predict entry point for the shared RoadToken3D PyTorch core.
 
-This is a new deployment runtime. It does not claim device qualification,
-bitwise cross-device equivalence or continuation of a historical training job.
+Model definitions, objectives, input handling, and pooled updates are shared.
+This module initializes the NPU, records the execution protocol, and provides
+training, prediction, and compatible-checkpoint resume commands.
 """
 from pathlib import Path
 import argparse

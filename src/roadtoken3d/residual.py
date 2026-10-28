@@ -1,18 +1,11 @@
-"""Unregistered CPU-development candidate: Cartesian + road-space displacement.
+"""Shared PyTorch decoder for Cartesian and road-relative displacements.
 
-This module does not replace a V17 variant, load checkpoints, or define a
-training/evaluation protocol. Its observation boundary and geometric decoding
-are derived from ``CartesianRoadFusion``; the substantive change is
-``C + (Q_corrected - Q_reference)`` instead of returning Q_corrected itself.
-The final coordinates are NOT constrained to a road or certified traffic-legal.
-Only the explicitly named correction-branch coordinates have road geometry.
-Decoding follows actual 3D polylines indexed by the map's stored ``s_road``
-coordinate; that coordinate has not been independently certified as Euclidean
-3D arc length. Strict state-dict reload requires the same external immutable
-geometry and parent construction, including nonpersistent geometry buffers;
-the state dictionary alone does not authenticate those external inputs.
-Existing V13/V17 losses and geometry metrics are not drop-in compatible with
-this output contract; a separately reviewed loss/runner would be required.
+The forecast is C + (Q_corrected - Q_reference). Only the correction branch
+is decoded on road geometry; final XYZ coordinates need not lie on a road.
+Geometry uses the map's stored s_road coordinate and strict XYZ joins.
+Checkpoint loading requires the same parent construction and immutable
+geometry, including nonpersistent geometry buffers. The current loss module
+validates the output contract before supervising final coordinates.
 """
 from __future__ import annotations
 from .prefix import cumsum as _prefix_sum
@@ -120,7 +113,7 @@ class RoadDisplacementResidualFusion(nn.Module):
         logits = -guide_distance / 100.0 + raw[..., 3].mean(-1)
         valid = road['mode_valid'].bool()
         logits = logits.masked_fill(~valid, torch.finfo(logits.dtype).min)
-        output = {'trajectories': trajectories, 'mode_logits': logits, 'mode_valid': valid, 'forecast_valid': valid.any(-1), 'cartesian_backbone_xyz': direct, 'interval_seconds': self.dt, 'road_geometry_constraint': False, 'metadata': {'model_family': 'road-displacement-residual-candidate-v1', 'preregistered': False, 'development_only': True, 'final_road_geometry_constraint': False, 'certified_traffic_legality': False, 'correction_branch_geometry_is_final_output_geometry': False, 'old_v13_v17_loss_compatible': False, 'final_equation': 'C + (Q_corrected - Q_reference)', 'no_candidate_policy': 'explicit_abstain_via_forecast_valid'}, 'correction_branch_reference_xyz': reference, 'correction_branch_corrected_xyz': corrected, 'correction_branch_displacement_xyz': displacement, 'correction_branch_raw_delta': raw, 'correction_branch_reference_progress_m': reference_progress, 'correction_branch_reference_speed_mps': base_speed, 'correction_branch_reference_lateral_m': base_lateral, 'correction_branch_reference_height_residual_m': base_height, 'correction_branch_progress_m': progress, 'correction_branch_decoded_progress_m': torch.minimum(progress, road['route_length_m'][..., None]), 'correction_branch_requested_speed_mps': speed, 'correction_branch_lateral_m': lateral, 'correction_branch_height_residual_m': height, 'correction_branch_point_road_id': center['road'], 'correction_branch_point_road_s': center['s'], 'correction_branch_on_connector': center['on_connector'], 'correction_branch_clamped_at_route_end': center['clamped_at_route_end'], 'correction_branch_reference_clamped_at_route_end': reference_center['clamped_at_route_end'], 'correction_branch_intrinsic_endpoint_saturated': intrinsic['endpoint_saturated'], 'correction_branch_route_roads': roads, 'correction_branch_route_directions': directions, 'correction_branch_strict_route_count': count, 'correction_branch_route_start_s': start_s}
+        output = {'trajectories': trajectories, 'mode_logits': logits, 'mode_valid': valid, 'forecast_valid': valid.any(-1), 'cartesian_backbone_xyz': direct, 'interval_seconds': self.dt, 'road_geometry_constraint': False, 'metadata': {'model_family': 'road-displacement-residual-candidate-v1', 'final_road_geometry_constraint': False, 'certified_traffic_legality': False, 'correction_branch_geometry_is_final_output_geometry': False, 'old_v13_v17_loss_compatible': False, 'final_equation': 'C + (Q_corrected - Q_reference)', 'no_candidate_policy': 'explicit_abstain_via_forecast_valid'}, 'correction_branch_reference_xyz': reference, 'correction_branch_corrected_xyz': corrected, 'correction_branch_displacement_xyz': displacement, 'correction_branch_raw_delta': raw, 'correction_branch_reference_progress_m': reference_progress, 'correction_branch_reference_speed_mps': base_speed, 'correction_branch_reference_lateral_m': base_lateral, 'correction_branch_reference_height_residual_m': base_height, 'correction_branch_progress_m': progress, 'correction_branch_decoded_progress_m': torch.minimum(progress, road['route_length_m'][..., None]), 'correction_branch_requested_speed_mps': speed, 'correction_branch_lateral_m': lateral, 'correction_branch_height_residual_m': height, 'correction_branch_point_road_id': center['road'], 'correction_branch_point_road_s': center['s'], 'correction_branch_on_connector': center['on_connector'], 'correction_branch_clamped_at_route_end': center['clamped_at_route_end'], 'correction_branch_reference_clamped_at_route_end': reference_center['clamped_at_route_end'], 'correction_branch_intrinsic_endpoint_saturated': intrinsic['endpoint_saturated'], 'correction_branch_route_roads': roads, 'correction_branch_route_directions': directions, 'correction_branch_strict_route_count': count, 'correction_branch_route_start_s': start_s}
         for key in ('time_message_context', 'time_message_arrival_mass', 'time_message_traversal_s', 'time_message_speed_mps', 'graph_temporal_node_logits', 'graph_node_reachable', 'graph_earliest_arrival_s', 'graph_motion_prior_speed_mps'):
             output[key] = road[key]
         return output
