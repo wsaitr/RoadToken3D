@@ -41,7 +41,7 @@ class EndpointStableRoadDisplacementResidualFusion(RoadDisplacementResidualFusio
 
     def forward(self, *road_inputs):
         output = super().forward(*road_inputs)
-        output['metadata'] = {**output['metadata'], 'model_family': FAMILY, 'endpoint_lateral_frame': 'sampled_at_clamped_arc_inside_same_strict_prefix', 'short_prefix_longitudinal_saturation_repaired': False, 'strict_XYZ_connectivity_or_elevation_repaired': False, 'registered_v1_study_compatible': False}
+        output['metadata'] = {**output['metadata'], 'model_family': FAMILY, 'endpoint_lateral_frame': 'sampled_at_clamped_arc_inside_same_strict_prefix', 'short_prefix_longitudinal_saturation_repaired': False, 'strict_XYZ_connectivity_or_elevation_repaired': False}
         return output
 
 def endpoint_stable_residual_forward(model, batch):

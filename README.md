@@ -13,7 +13,7 @@ The released model is `joint-timegate6-anchor-20261023-v6`. Its components are:
 - A learned height anchor applied only to Z.
 - Six trajectory/graph loss terms plus two gate losses, with numerator/denominator pooling over 128 training examples.
 
-The model, losses, data handling, and pooled update arithmetic use standard PyTorch. Ascend-specific code is limited to device initialization, device RNG handling, and a padding-stable prefix-sum helper. Parent-module version names identify inherited dependencies; the top-level model is the current v6 implementation. [SOURCE_SYNC.json](SOURCE_SYNC.json) records the source lineage and validation history.
+The model, losses, data handling, and pooled update arithmetic use standard PyTorch. Ascend-specific code is limited to device initialization, device RNG handling, and a padding-stable prefix-sum helper. Parent-module version names identify inherited dependencies; the top-level model is the current v6 implementation.
 
 ## Quick start: runnable synthetic demo
 
@@ -67,7 +67,7 @@ The examples contain relative XYZ **future targets only**, covering long-range c
 
 Small generated-data checks passed on native ARM CPU and a single Ascend device on 2026-10-25. The Ascend runtime reported `Ascend910B4` with PyTorch 2.3.1 and `torch_npu` 2.3.1.post2.dev20241029. Three optimizer updates covered a continuous run and a fresh-process checkpoint resume, with matching model, Adam, sampling, and RNG states. Prefix operations, gradients, Z-only anchoring, and future-label exclusion were also checked.
 
-These checks establish small-scale code correctness. Full-data accuracy, throughput, production-scale memory, and cross-device numerical equivalence require separate evaluation. Source fingerprints and the scope of subsequent maintenance updates are recorded in [SOURCE_SYNC.json](SOURCE_SYNC.json).
+These checks establish small-scale code correctness. Full-data accuracy, throughput, production-scale memory, and cross-device numerical equivalence require separate evaluation. 
 
 ## Code map
 

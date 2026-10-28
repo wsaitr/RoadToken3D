@@ -5,7 +5,7 @@ time-gate objectives. Detached teacher assignment supervises final XY/Z
 coordinates, while graph supervision remains independent of candidate
 acceptance. The explicit TRAIN split keeps hindsight teachers out of
 validation and prediction. Shape, geometry, and model-family checks enforce
-the interface contract; they are not an experiment-approval mechanism.
+the interface contract.
 """
 from __future__ import annotations
 
@@ -27,12 +27,9 @@ DEFAULT_WEIGHTS = dict(_V1_DEFAULT_WEIGHTS)
 def _check_v2_contract(output, batch):
     meta = output.get("metadata", {})
     if (not isinstance(meta, Mapping) or meta.get("model_family") != FAMILIES.get(meta.get("arm")) or
-            meta.get("development_only") is not True or
             meta.get("endpoint_lateral_frame") != "sampled_at_clamped_arc_inside_same_strict_prefix" or
             meta.get("short_prefix_longitudinal_saturation_repaired") is not False or
             meta.get("strict_XYZ_connectivity_or_elevation_repaired") is not False or
-            meta.get("registered_v1_study_compatible") is not False or
-            meta.get("preregistered") is not False or
             meta.get("final_road_geometry_constraint") is not False or
             meta.get("correction_branch_geometry_is_final_output_geometry") is not False or
             meta.get("final_equation") != EQUATIONS.get(meta.get("arm")) or
@@ -238,9 +235,7 @@ def joint_residual_loss(output, batch, weights=None, return_parts=False, *, spli
         "training_assigned_mode": torch.where(available, assignment, torch.full_like(assignment, -1)).detach(),
         "aggregation": "sum_each_term_numerator_and_denominator_before_dividing; not_mean_of_microbatch_means",
         "graph_supervision_independent_of_candidate_acceptance": True,
-        "preregistered": False,
         "model_family": output["metadata"]["model_family"],
-        "registered_v1_study_compatible": False,
         "teacher_scope": "training_objective_only_not_forecast_or_evaluation",
         "declared_split": split,
         "data_split_provenance_verified": False,

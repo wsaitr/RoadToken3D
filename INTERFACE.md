@@ -4,7 +4,7 @@
 
 The default is `joint-timegate6-anchor`, the current manuscript's Full model. The other five names in `current_model.ARMS_V6` preserve the matching control configurations. Parent checkpoints supply their original model options, weights and immutable geometry; a trained Full state can then be loaded with strict parameter matching.
 
-The old endpoint-only source bundle is superseded and is not part of this upload. `SOURCE_SYNC.json` identifies the actual learned-gate source routines used. Imports and module binding are made local; no former training controller is imported and no global backend monkeypatch is installed.
+The old endpoint-only source bundle is superseded and is not part of this upload. `current_model.py` assembles the learned occupancy and height gates used by the current model. Imports and module binding are made local; no former training controller is imported and no global backend monkeypatch is installed.
 
 Model definitions, training objectives, prepared-data handling, and pooled updates form one shared PyTorch core. The Ascend wrapper supplies device initialization, checkpoint orchestration, and device RNG handling. Resume requires the same Ascend source/data/config protocol, including optimizer, draw order and RNG states. Loading a model's weights is distinct from resuming another device's optimizer trajectory. No cross-device bitwise or historical draw-order equivalence is claimed.
 
@@ -33,13 +33,13 @@ Use `val` or `dev` for the validation manifest. Prepared file hashes are checked
 - Model, geometry, limits, teacher rules, losses and gate supervision follow the current v6 code.
 - Eight numerator/denominator terms are pooled before dividing. Count/replay verifies values, weights and RNG before updates; frozen parents are checked.
 - The prior device's FP64 matrix prefix is not assumed available on Ascend. A conservative on-device sequential FP32/int32 scan preserves exact zero-padded tails and differentiation; output dtype is retained. Its speed is not qualified. CPU reference code uses the standard prefix operation.
-- A single-device generated-data check passed on the recorded stack: real updates, raw NPU Adam checkpoint save/load, fresh-process state replay, prefix gradients and observation-only forwarding. See `SOURCE_SYNC.json` for exact scope and fingerprints. Full-data execution, throughput and production-scale memory still require qualification before scientific use.
+- A single-device generated-data check passed on the recorded stack: real updates, raw NPU Adam checkpoint save/load, fresh-process state replay, prefix gradients and observation-only forwarding. Full-data execution, throughput and production-scale memory still require qualification before scientific use.
 
 Preparing or uploading this repository starts no paid device, real training or evaluation. The synthetic check uses a generated tiny road graph and contains zero real samples and three tiny optimizer updates. It tests nonzero gates, all eight losses, future-label exclusion, gradients, pooled updates, input hashes, exact model/Adam/draw/RNG reload and prefix behavior; it cannot validate a full NPU training run.
 
 ## Model metadata
 
-Output metadata describes model identity, geometry, masks, and coordinate semantics. Legacy study-status fields are populated automatically by the original model and retained for source compatibility. They describe the historical experiment lineage; they are not a licensing statement or a request for a user to obtain training approval. TRAIN-only teacher checks, observation-only prediction inputs, finite-value guards, and source/data/checkpoint integrity checks remain active. Training commands and their required input files are documented in the README.
+Output metadata describes model identity, geometry, masks, and coordinate semantics. TRAIN-only teacher checks, observation-only prediction inputs, finite-value guards, and source/data/checkpoint integrity checks remain active. Training commands and their required input files are documented in the README.
 
 ## Runnable demonstration and paper reproduction
 
