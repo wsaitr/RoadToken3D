@@ -1,6 +1,6 @@
 {
   "model_family": "joint-timegate6-anchor-20261023-v6",
-  "basis": "Current 415-window manuscript Full source; not the old Ascend endpoint-only implementation",
+  "basis": "Shared PyTorch core of the actual current-paper v6 model with the existing small Ascend execution layer",
   "source_symbols": [
     {
       "source": "deliverables/roadtoken3d-status-20261024/current-mechanism-review/source/roadtoken3d-completion-20261015/joint-XYZ-road-20261018-v1/joint_model.py",
@@ -401,5 +401,17 @@
     "tested_source_set_sha256": "076ac38708f324ee85f49d0eabd0d861913d985f8ebab2b2a5cf98c032433b3b",
     "continuous_log_sha256": "668210b434ea2d015895673360f5276edce6164cad4fd970d66998e631f5d7ce",
     "resume_log_sha256": "668210b434ea2d015895673360f5276edce6164cad4fd970d66998e631f5d7ce"
+  },
+  "release_maintenance_20261028": {
+    "documentation_language": "English",
+    "current_model_family": "joint-timegate6-anchor-20261023-v6",
+    "actual_paper_checkpoint_commit": "step-00001600-41f5ee288a1e4b82b08bcca67d9c3d50",
+    "actual_KML_source_fingerprints_rechecked": true,
+    "executable_Python_bodies_unchanged_from_qualified_release": true,
+    "changes": "English documentation, package description, and module descriptions only",
+    "training_model_loss_checkpoint_logic_changed": false,
+    "additional_model_tests_or_experiments_for_final_release": 0,
+    "validation_provenance": "Existing 2026-10-25 ARM CPU and Ascend generated-data checks on code commit 489854ba0e1e0bc608f9264374a7d1f653496cc0",
+    "scope": "The runnable synthetic demonstration is already included; full data, frozen parent weights, historical controllers, and experiment logs are not distributed."
   }
 }

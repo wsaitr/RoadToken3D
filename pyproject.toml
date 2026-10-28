@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "roadtoken3d-ascend"
 version = "0.2.0"
-description = "RoadToken3D Ascend NPU implementation preview"
+description = "RoadToken3D shared PyTorch model with Ascend NPU execution"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24,<3", "torch>=2.1"]
 

@@ -1,4 +1,4 @@
-# Inputs, source synchronization and execution scope
+# Model interfaces, shared core, and Ascend execution
 
 ## Model and checkpoint identity
 
@@ -6,7 +6,7 @@ The default is `joint-timegate6-anchor`, the current manuscript's Full model. Th
 
 The old endpoint-only source bundle is superseded and is not part of this upload. `SOURCE_SYNC.json` identifies the actual learned-gate source routines used. Imports and module binding are made local; no former training controller is imported and no global backend monkeypatch is installed.
 
-The execution wrapper is new. Resume is accepted only from the same Ascend source/data/config protocol, including optimizer, draw order and RNG states. Loading a model's weights is distinct from resuming another device's optimizer trajectory. No cross-device bitwise or historical draw-order equivalence is claimed.
+Model definitions, training objectives, prepared-data handling, and pooled updates form one shared PyTorch core. The Ascend wrapper supplies device initialization, checkpoint orchestration, and device RNG handling. Resume requires the same Ascend source/data/config protocol, including optimizer, draw order and RNG states. Loading a model's weights is distinct from resuming another device's optimizer trajectory. No cross-device bitwise or historical draw-order equivalence is claimed.
 
 The published Full outputs used fixed1600 weights. The example configuration therefore declares `fixed-final`. `validation-first-strict-min` is an explicit alternative for a separately declared run; the resulting outputs must not be mixed or relabeled. Validation is evaluated every200 steps, checkpoints saved every50, with1600 updates/global128/micro16 and fixed FP32 AdamW3e-4/weight decay1e-3.
 
@@ -36,3 +36,11 @@ Use `val` or `dev` for the validation manifest. Prepared file hashes are checked
 - A single-device generated-data check passed on the recorded stack: real updates, raw NPU Adam checkpoint save/load, fresh-process state replay, prefix gradients and observation-only forwarding. See `SOURCE_SYNC.json` for exact scope and fingerprints. Full-data execution, throughput and production-scale memory still require qualification before scientific use.
 
 Preparing or uploading this repository starts no paid device, real training or evaluation. The synthetic check uses a generated tiny road graph and contains zero real samples and three tiny optimizer updates. It tests nonzero gates, all eight losses, future-label exclusion, gradients, pooled updates, input hashes, exact model/Adam/draw/RNG reload and prefix behavior; it cannot validate a full NPU training run.
+
+## Model metadata
+
+Output metadata describes model identity, geometry, masks, and coordinate semantics. Legacy study-status fields are populated automatically by the original model and retained for source compatibility. They describe the historical experiment lineage; they are not a licensing statement or a request for a user to obtain training approval. TRAIN-only teacher checks, observation-only prediction inputs, finite-value guards, and source/data/checkpoint integrity checks remain active. Training commands and their required input files are documented in the README.
+
+## Runnable demonstration and paper reproduction
+
+`tests/smoke_current.py` is the existing self-contained generated-data demonstration. It builds the actual model classes with tiny dimensions and initialized parents, performs updates, and exercises checkpoint resume without private assets. The three recorded CSV cases are target-only illustrations. Full manuscript reproduction additionally requires the full prepared dataset, map geometry, and frozen trained parent weights; these are not supplied in this minimal release.

@@ -1,25 +1,34 @@
 # RoadToken3D
 
-代码与少量样本的公开仓库。仅上传当前论文模型所需代码、一个合成检查和 **3条案例轨迹**；完整样本待录用后另行发布。
+RoadToken3D forecasts 3D vehicle trajectories from observed motion and road geometry. This repository contains the shared PyTorch model and training core used by the current manuscript, a small Ascend execution layer, and **three recorded trajectory examples**.
 
-## 当前版本
+## Model
 
-模型算法以当前415窗口论文的 `joint-timegate6-anchor-20261023-v6` 为准，包含：
+The released model is `joint-timegate6-anchor-20261023-v6`. Its components are:
 
-- 保留原始XYZ预测的可学习笛卡尔分支；
-- 共享纵向进度的三维道路解码、水平20米/道路Z修正2米限幅；
-- 物理通行时延消息和最早到达约束；
-- 学习式时间占用门（logit增益10、1米监督死区、类别平衡）；
-- 只加到Z的学习式高度锚及其监督；
-- 原6项损失加高度门/时间门两项辅助损失，按全局128条样本汇总分子、分母。
+- A learned Cartesian XYZ branch built on frozen parent models.
+- Road-relative 3D decoding with shared longitudinal progress and bounded road corrections: 20 m horizontally and 2 m vertically.
+- Travel-time delayed graph messages and earliest-arrival constraints.
+- A learned time-occupancy gate with gain 10, a 1 m supervision deadband, and class-balanced supervision.
+- A learned height anchor applied only to Z.
+- Six trajectory/graph loss terms plus two gate losses, with numerator/denominator pooling over 128 training examples.
 
-这次提供的是上述当前模型的昇腾适配入口，**不是旧的端点稳定版改名**。旧训练调度器、云端发布工具、诊断历史、原始大数据、检查点和其他加速器实现均未上传。父模型依赖文件中的旧版本编号属于继承关系，不代表主模型回退。
+The model, losses, data handling, and pooled update arithmetic use standard PyTorch. Ascend-specific code is limited to device initialization, device RNG handling, and a padding-stable prefix-sum helper. Parent-module version names identify inherited dependencies; the top-level model is the current v6 implementation. [SOURCE_SYNC.json](SOURCE_SYNC.json) records the source lineage and validation history.
 
-**验证边界：算法同步、原生ARM CPU检查及昇腾单卡小规模训练/断点恢复检查已完成。** 不据此声称已有昇腾训练结果或可逐位复现其他设备的历史数值。前缀累加采用保持零填充尾部一致的昇腾设备内参考实现；完整数据上的数值、内存和速度仍需另行验证。
+## Quick start: runnable synthetic demo
 
-## 使用
+With NumPy and PyTorch installed, run the existing demonstration from the repository root:
 
-先按[华为官方兼容说明](https://github.com/Ascend/pytorch/blob/master/COMPATIBILITY.md)准备匹配的CANN、PyTorch与`torch_npu`，再运行：
+```bash
+python -m pip install -e . --no-deps
+python tests/smoke_current.py
+```
+
+The demo generates a tiny road graph, complete observation/label tensors, and initialized parent modules. It exercises the same model and eight objectives, performs tiny parameter updates, and checks checkpoint resume. It needs no private files or accelerator. Its generated inputs and initialized weights are for demonstrating execution, not reproducing the manuscript's scores.
+
+## Ascend installation
+
+Prepare compatible CANN, PyTorch, and `torch_npu` versions using the [official Ascend compatibility matrix](https://github.com/Ascend/pytorch/blob/master/COMPATIBILITY.md), then install this package:
 
 ```bash
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
@@ -27,47 +36,47 @@ python -m pip install -e . --no-deps
 python -m roadtoken3d.ascend --help
 ```
 
-准备配置后，在实际昇腾环境中显式运行：
+## Training, prediction, and resume
+
+Copy [configs/current.example.json](configs/current.example.json) to `configs/current.json` and set the parent-checkpoint, road-geometry, and prepared-input paths. See [INTERFACE.md](INTERFACE.md) for input arrays, split checks, and checkpoint compatibility.
 
 ```bash
-python -m roadtoken3d.ascend train --config configs/current.json --output runs/new-ascend
-python -m roadtoken3d.ascend predict --config configs/current.json --weights checkpoints/full.pt --output runs/new-prediction
+# Train on an Ascend NPU.
+python -m roadtoken3d.ascend train --config configs/current.json --output runs/train
+
+# Resume a checkpoint with the same source, configuration, data, and runtime.
+python -m roadtoken3d.ascend train --config configs/current.json --resume runs/train/step-0050.pt --output runs/resumed
+
+# Predict using trained weights and observation/map inputs.
+python -m roadtoken3d.ascend predict --config configs/current.json --weights checkpoints/full.pt --output runs/prediction
 ```
 
-这些命令不会由仓库自动执行；需要另行准备冻结父模型、道路几何和完整输入。配置模板为 [configs/current.example.json](configs/current.example.json)，输入字段和检查点规则见 [INTERFACE.md](INTERFACE.md)。模型接口与设备入口分开，CPU仅用于小型实现检查；训练/预测入口强制使用真实NPU。
+Use the actual checkpoint filename produced by your run for `--resume`. Training and prediction require an Ascend NPU; the tensor core also supports CPU implementation checks. The default configuration uses 41 history positions, 20 forecast steps at 15 s, 1,600 updates, a global batch of 128, microbatches of 16, and FP32 AdamW.
 
-检查已提供样本无需模型或加速器：
+## Examples and checks
+
+Inspect the three supplied trajectories without installing model dependencies:
 
 ```bash
 python tools/inspect_samples.py
 ```
 
-已有PyTorch的环境可运行合成检查：
+The examples contain relative XYZ **future targets only**, covering long-range continuation, height variation, and a horizontal failure case. They do not include vehicle identifiers, absolute locations, observation histories, road graphs, predictions, or parent weights. They illustrate the trajectory format and are not complete training inputs. Full-data release is planned after paper acceptance.
 
-```bash
-PYTHONPATH=src python tests/smoke_current.py
-```
+## Validation
 
-ARM验证使用aarch64、Python 3.10.6、PyTorch 2.3.1，已通过前向/反向、8项损失、输入完整性和3次合成更新；保存恢复后的模型、Adam、抽样顺序和随机状态与连续运行完全一致。这些检查不计算论文性能。后续模型或损失变动须同步本适配版，并更新`SOURCE_SYNC.json`中的来源指纹及验证状态。
+Small generated-data checks passed on native ARM CPU and a single Ascend device on 2026-10-25. The Ascend runtime reported `Ascend910B4` with PyTorch 2.3.1 and `torch_npu` 2.3.1.post2.dev20241029. Three optimizer updates covered a continuous run and a fresh-process checkpoint resume, with matching model, Adam, sampling, and RNG states. Prefix operations, gradients, Z-only anchoring, and future-label exclusion were also checked.
 
-2026-10-25昇腾实机检查也已通过：按最低可用32GB单卡规格申请，设备报告`Ascend910B4`；PyTorch 2.3.1 / torch_npu 2.3.1.post2.dev20241029。使用合成道路、41步历史/20步预测、116170个可训练参数，实际完成3次优化更新（连续2次＋新进程恢复后1次），模型、Adam、抽样与随机状态逐项一致；前缀累加、梯度、输入边界也通过。该检查复用发布版的构建、更新与保存恢复组件，不验证1600步完整任务、真实数据精度或跨设备逐位等价。
+These checks establish small-scale code correctness. Full-data accuracy, throughput, production-scale memory, and cross-device numerical equivalence require separate evaluation. Source fingerprints and the scope of subsequent maintenance updates are recorded in [SOURCE_SYNC.json](SOURCE_SYNC.json).
 
-3条CSV保留论文已有案例的相对XYZ目标轨迹，分别为长程延续、高度变化和水平失败例。不含车辆标识、绝对定位、模型预测、完整历史或道路图；它们用于展示格式与轨迹，不能代替完整训练输入或全样本性能评价。
+## Code map
 
-## 最小代码导航
-
-| 文件 | 用途 |
+| Path | Purpose |
 |---|---|
-| `src/roadtoken3d/current_model.py` | 当前v6模型、时间门、高度锚及配对控制配置 |
-| `src/roadtoken3d/current_loss.py`、`optimization.py` | 当前损失、门控监督及汇总更新 |
-| `src/roadtoken3d/residual.py`、`endpoint.py` | 道路相对残差和端点稳定解码 |
-| `src/roadtoken3d/ascend.py`、`data.py` | 昇腾入口及准备好的窗口输入 |
-| `src/roadtoken3d/prefix.py` | 昇腾前缀累加适配，不回退主机张量计算 |
-| 其余模型文件 | 当前父模型的直接依赖，已去掉无用旧定义 |
-| `SOURCE_SYNC.json` | 同步来源、文件指纹与实机验证状态 |
-
-## English
-
-This code release contains the current paper's v6 model, an Ascend-only FP32 runtime and three illustrative target trajectories. Learned time occupancy, the Z-only height anchor, the learned XYZ branch, bounded road residual and all eight training terms are included. Historical deployment/diagnostic code and alternative accelerator implementations are excluded.
-
-Native ARM CPU synthetic checks (aarch64, PyTorch 2.3.1), including three tiny optimizer updates and exact model/Adam/draw/RNG checkpoint replay, passed. They verify implementation properties; they are not Ascend device qualification or paper performance. A one-device Ascend check also passed three synthetic optimizer updates and fresh-process checkpoint replay using the published build/update/checkpoint components (runtime-reported Ascend910B4, requested 32 GB single-device tier). Full-data training, throughput, production-scale memory and cross-device numerical equivalence remain unqualified. Full data and checkpoints are not included. See the interface document before running training.
+| `src/roadtoken3d/current_model.py` | Shared v6 model, occupancy gate, height anchor, and control configurations |
+| `src/roadtoken3d/current_loss.py`, `optimization.py` | Shared objectives, gate supervision, and pooled updates |
+| `src/roadtoken3d/residual.py`, `endpoint.py` | Road-relative displacement and endpoint-stable decoding |
+| `src/roadtoken3d/data.py` | Prepared inputs, hashes, and reproducible sampling |
+| `src/roadtoken3d/ascend.py`, `prefix.py` | Ascend execution and prefix-operation compatibility |
+| Other model modules | Direct dependencies of the frozen parent models |
+| `examples/` | Three recorded target trajectories and their hashes |
